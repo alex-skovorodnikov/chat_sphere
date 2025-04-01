@@ -1,12 +1,14 @@
-from pydantic import BaseModel
 from datetime import datetime
 from uuid import UUID
-from typing import List
+
+from pydantic import BaseModel
+
 
 class UserCreate(BaseModel):
     name: str
     email: str
     password: str
+
 
 class User(BaseModel):
     id: UUID
@@ -16,6 +18,7 @@ class User(BaseModel):
     class Config:
         from_attributes = True
 
+
 class GroupCreate(BaseModel):
     title: str
 
@@ -23,7 +26,7 @@ class GroupCreate(BaseModel):
 class Group(BaseModel):
     id: UUID
     title: str
-    users: List[User] = []
+    users: list[User] = []
 
     class Config:
         from_attributes = True
