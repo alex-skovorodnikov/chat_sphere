@@ -1,0 +1,32 @@
+name: chat_app_dev
+services:
+  database:
+    container_name: pg_chat
+    image: postgres:16-alpine
+    env_file:
+      - ./postgres/.env
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+
+    volumes:
+      - postgres_data_chat:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: "postgres -c max_connections=150
+               -c shared_buffers=512MB -c effective_cache_size=1536MB
+               -c maintenance_work_mem=128MB -c checkpoint_completion_target=0.9 -c wal_buffers=16MB
+               -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=200
+               -c work_mem=3495kB -c min_wal_size=1GB -c max_wal_size=4GB -c max_worker_processes=2
+               -c max_parallel_workers_per_gather=1 -c max_parallel_workers=2 -c max_parallel_maintenance_workers=1"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data_chat:
+    driver: local
+    name: postgres_data_chat

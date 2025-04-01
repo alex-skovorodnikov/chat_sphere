@@ -1,0 +1,15 @@
+
+services:
+  app:
+    container_name: fastapi
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 3s
+      timeout: 2s
+      retries: 3
