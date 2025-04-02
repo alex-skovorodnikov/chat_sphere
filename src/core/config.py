@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
 import os
+import logging
 from logging import config as logging_config
 
 from src.core.logger import LOGGING
@@ -11,6 +12,19 @@ logging_config.dictConfig(LOGGING)
 PROJECT_NAME = os.getenv('PROJECT_NAME', 'chat_phases')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+logger = logging.getLogger(__name__)
+
+
+class RedisConfig(BaseSettings):
+    host: str = Field(default='localhost')
+    port: int = Field(default=6379)
+
+
+class SecurityConfig(BaseSettings):
+    secret_key: str = Field(default='secret_key')
+    algorithm: str = Field(default='HS256')
+    access_token_expire_minutes: int = Field(default=30)
+    refresh_token_expire_days: int = Field(default=7)
 
 
 class PostgresConfig(BaseSettings):
@@ -35,6 +49,9 @@ class PostgresConfig(BaseSettings):
 
 class Settings(BaseSettings):
     db: PostgresConfig = PostgresConfig()
+    redis: RedisConfig = RedisConfig()
+    security: SecurityConfig = SecurityConfig()
 
 
 settings = Settings()
+logger.info(settings.security)

@@ -1,0 +1,41 @@
+@startuml
+
+entity "User" as user {
+    + id: UUID <<PK>>
+    + name: String
+    + email: String <<unique>>
+    + password: String
+}
+
+entity "Chat" as chat {
+    + id: UUID <<PK>>
+    + title: String
+    + chat_type: String
+}
+
+entity "Group" as group {
+    + id: UUID <<PK>>
+    + title: String
+    + creator_id: UUID <<FK>>
+}
+
+entity "Message" as message {
+    + id: UUID <<PK>>
+    + chat_id: UUID <<FK>>
+    + sender_id: UUID <<FK>>
+    + text: String
+    + timestamp: DateTime
+    + is_read: Boolean
+}
+
+entity "group_users" as group_users {
+    + group_id: UUID <<FK>>
+    + user_id: UUID <<FK>>
+}
+
+user ||--o{ group_users : ""
+group ||--o{ group_users : ""
+chat ||--o{ message : ""
+user ||--o{ message : ""
+
+@enduml

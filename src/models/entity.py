@@ -65,7 +65,7 @@ class Group(Base):
     )
     title: Mapped[str] = mapped_column(String, index=True)
     creator_id: Mapped[UUID] = mapped_column(UUID, ForeignKey('users.id'))
-    creator: Mapped[User] = relationship('Users')
+    creator: Mapped[User] = relationship('User')
 
     users = relationship('User', secondary=group_users, back_populates='groups')
 

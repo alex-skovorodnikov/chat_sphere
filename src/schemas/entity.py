@@ -4,6 +4,15 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+class ChatCreate(BaseModel):
+    title: str
+    chat_type: str = 'personal'
+
+
+class Chat(ChatCreate):
+    id: UUID
+
+
 class UserCreate(BaseModel):
     name: str
     email: str

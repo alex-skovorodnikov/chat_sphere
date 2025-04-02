@@ -1,0 +1,32 @@
+@startuml
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as ChatService
+participant "Database" as DB
+participant "Group Chat" as GroupChat
+
+User -> WS: connect()
+activate WS
+
+WS -> User: connectionEstablished
+deactivate WS
+
+User -> WS: sendMessage(groupId, text)
+activate WS
+
+WS -> ChatService: handleMessage(groupId, text)
+activate ChatService
+
+ChatService -> DB: saveMessage(groupId, text, senderId)
+activate DB
+DB --> ChatService: messageSaved
+deactivate DB
+
+ChatService -> GroupChat: broadcastMessage(groupId, text, senderId)
+activate GroupChat
+GroupChat --> WS: messageBroadcasted
+deactivate GroupChat
+
+WS -> User: messageSent
+deactivate WS
+@enduml
