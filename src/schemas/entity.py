@@ -30,11 +30,14 @@ class User(BaseModel):
 
 class GroupCreate(BaseModel):
     title: str
+    creator_id: UUID
+    # users: list[User] = []
 
 
 class Group(BaseModel):
     id: UUID
     title: str
+    creator_id: UUID
     users: list[User] = []
 
     class Config:

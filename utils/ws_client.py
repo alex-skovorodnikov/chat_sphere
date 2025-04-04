@@ -1,32 +1,14 @@
 import asyncio
+
 import websockets
 import aiohttp
+import json
 
-
-async def senf_message(chat_id: str, user_id: str, token: str):
-    uri = f"ws://localhost:8000/ws/{chat_id}?token={token}"
-    async with websockets.connect(uri) as websocket:
-        await websocket.send(f"Message from {user_id}: {message}")
-        print(f"Sent message: {message}")
-        try:
-            while True:
-                # Отправка сообщения
-                msg = input("Enter your message (or 'exit' to quit): ")
-                if msg.lower() == 'exit':
-                    break
-
-                await websocket.send(f"Message from {user_id}: {msg}")
-                print(f"Sent message: {msg}")
-
-                response = await websocket.recv()
-                print(f"Received response: {response}")
-
-        except websockets.ConnectionClosed:
-            print('Connection closed')
+from data import add_user_to_group
 
 
 async def authenticate(username: str, password: str):
-    url = 'http://localhost:8000/signin'
+    url = 'http://localhost:8000/api/v1/auth/signin'
     data = {
         'username': username,
         'password': password,
@@ -42,13 +24,40 @@ async def authenticate(username: str, password: str):
                 return None
 
 
-if __name__ == '__main__':
-    chat_id = '5e8c4127-79c7-4093-84cb-0d4db0763953'
-    user_id = '9cecd1c9-02f3-4f4f-9bc8-1526f0da4bdf'
-    message = 'Hello, WebSocket!'
+async def receive_message(websocket):
+    print('Received message running on websocket')
+    while True:
+        await asyncio.sleep(1)  # Simulate waiting for messages
+        try:
+            message = await websocket.recv()
+            print(f'Received message: {message}')
+        except websockets.ConnectionClosed:
+            print('Connection closed')
+            break
 
+
+async def send_message(username: str, password: str):
+    token = await authenticate(username=username, password=password)
+    uri = f"ws://localhost:8000/api/v1/ws?token={token}"
+    print(f'{token=}')
+
+    async with websockets.connect(uri) as websocket:
+        receive_task = asyncio.create_task(receive_message(websocket))
+    #
+        try:
+            while True:
+                await asyncio.sleep(3)
+                await websocket.send(json.dumps(add_user_to_group))
+
+        except websockets.ConnectionClosed:
+            print('Connection closed')
+
+        finally:
+            receive_task.cancel()
+            await receive_task
+
+if __name__ == '__main__':
     username = 'user1'
     password = 'user1'
 
-    token = authenticate(username, password)
-    asyncio.run(senf_message(chat_id, user_id, token))
+    asyncio.run(send_message(username, password))

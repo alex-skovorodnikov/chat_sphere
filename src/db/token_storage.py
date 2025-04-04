@@ -25,9 +25,9 @@ class AsyncKeyValueStorage(ABC):
     ) -> None:
         pass
 
-    @abstractmethod
-    async def get_user_tokens(self, user_id: str, token_type: TokenType) -> set[bytes]:
-        pass
+    # @abstractmethod
+    # async def get_user_tokens(self, user_id: str, token_type: TokenType) -> set[bytes]:
+    #     pass
 
     @abstractmethod
     async def blacklist_token(self, token: str, expire: int) -> None:
@@ -107,19 +107,19 @@ class RedisStorage(AsyncKeyValueStorage):
             await pipe.expire(key, expire)
             await pipe.execute()
 
-    async def get_user_tokens(self, user_id: str, token_type: TokenType) -> set[bytes]:
-        """
-        Get all tokens for a user from Redis.
-
-        Args:
-            user_id (str): The ID of the user.
-            token_type (TokenType): The type of the tokens (ACCESS or REFRESH).
-
-        Returns:
-            Set[str]: A set of tokens.
-        """
-        key = f"user:{user_id}:{token_type.value}_tokens"
-        return await self.redis_client.smembers(key)
+    # async def get_user_tokens(self, user_id: str, token_type: TokenType) -> set[bytes]:
+    #     """
+    #     Get all tokens for a user from Redis.
+    #
+    #     Args:
+    #         user_id (str): The ID of the user.
+    #         token_type (TokenType): The type of the tokens (ACCESS or REFRESH).
+    #
+    #     Returns:
+    #         Set[str]: A set of tokens.
+    #     """
+    #     key = f"user:{user_id}:{token_type.value}_tokens"
+    #     return await self.redis_client.smembers(key)
 
     async def blacklist_token(self, token: str, expire: int) -> None:
         """

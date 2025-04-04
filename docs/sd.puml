@@ -1,0 +1,157 @@
+@startuml
+
+' Подключение пользователя через WebSocket
+== Подключение пользователя ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+
+User -> WS: Connect
+WS -> CS: Authenticate User
+CS -> DB: Validate Credentials
+DB --> CS: User Data
+CS --> WS: Connection Established
+WS --> User: Connection Acknowledged
+
+@enduml
+@startuml
+
+' Подключение пользователя и получение уведомлений
+== Подключение пользователя и получение уведомлений ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+
+User -> WS: Connect
+WS -> CS: Authenticate User
+CS -> DB: Validate Credentials
+DB --> CS: User Data
+CS --> WS: Connection Established
+WS --> User: Connection Acknowledged
+
+' Получение уведомлений из чатов
+CS -> DB: Fetch User Chats
+DB --> CS: List of Chats
+CS -> DB: Fetch Notifications for Chats
+DB --> CS: List of Notifications
+CS --> WS: Send Notifications to User
+WS --> User: Deliver Notifications
+
+@enduml
+
+@startuml
+
+' Отправка персонального сообщения
+== Отправка персонального сообщения ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+participant "Message Queue" as MQ
+
+User -> WS: Send Personal Message
+WS -> CS: Forward Message (recipient_id, text)
+CS -> DB: Save Message (recipient_id, text)
+DB --> CS: Message ID
+CS -> MQ: Notify Recipient
+MQ --> WS: Broadcast Message to Recipient
+WS --> User: Message Sent Acknowledgment
+WS --> Recipient: Deliver Personal Message
+
+
+
+' Отправка группового сообщения
+== Отправка группового сообщения ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+participant "Message Queue" as MQ
+
+User -> WS: Send Group Message (chat_id, text)
+WS -> CS: Forward Group Message (chat_id, text)
+CS -> DB: Save Message (chat_id, sender_id, text)
+DB --> CS: Message ID
+CS -> MQ: Notify Group Members
+MQ --> WS: Broadcast Message to Group Members
+WS --> User: Group Message Sent Acknowledgment
+
+@enduml
+
+
+
+@startuml
+
+' Отправка сообщения
+== Отправка сообщения ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+participant "Message Queue" as MQ
+
+User -> WS: Send Message
+WS -> CS: Forward Message
+CS -> DB: Save Message
+DB --> CS: Message ID
+CS -> MQ: Notify Participants
+MQ --> WS: Broadcast Message
+WS --> User: Message Sent Acknowledgment
+
+@enduml
+
+@startuml
+
+' Получение истории сообщений
+== Получение истории сообщений ==
+actor User
+participant "REST API" as API
+participant "Chat Service" as CS
+participant "Database" as DB
+
+User -> API: GET /history/{chat_id}
+API -> CS: Fetch Message History
+CS -> DB: Query Messages
+DB --> CS: Message List
+CS --> API: Return Message History
+API --> User: Send Message History
+
+@enduml
+
+@startuml
+
+' Обработка статуса "прочитано"
+== Обработка статуса "прочитано" ==
+actor User
+participant "WebSocket Server" as WS
+participant "Chat Service" as CS
+participant "Database" as DB
+
+User -> WS: Mark Message as Read
+WS -> CS: Update Read Status
+CS -> DB: Update Message Status
+DB --> CS: Status Updated
+CS -> WS: Notify Sender
+WS --> User: Read Status Acknowledged
+
+@enduml
+
+@startuml
+
+' Создание группового чата
+== Создание группового чата ==
+actor User
+participant "REST API" as API
+participant "Chat Service" as CS
+participant "Database" as DB
+
+User -> API: POST /create_group
+API -> CS: Create Group Request
+CS -> DB: Save Group Data
+DB --> CS: Group ID
+CS --> API: Return Group ID
+API --> User: Group Created Acknowledgment
+
+@enduml

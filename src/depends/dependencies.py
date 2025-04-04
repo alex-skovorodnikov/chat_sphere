@@ -5,7 +5,7 @@ import redis.asyncio as redis
 from functools import lru_cache
 from jwt import InvalidTokenError
 
-from fastapi import Depends, HTTPException, status, Form
+from fastapi import Depends, HTTPException, status, Form, WebSocket, Query, WebSocketException
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from redis.asyncio import Redis
@@ -20,17 +20,27 @@ from src.db.token_storage import RedisStorage
 from src.schemas.entity import User
 from src.schemas.token import TokenType
 from src.services.token import JWTManageService
-from src.services.websocket import WebSocketConnectionManager
+from src.managers.websocket_manager import WebSocketConnectionManager
 from src.services.messages import CustomMessageService
 
 
 logger = logging.getLogger(__name__)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='api/v1/auth/signin')
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_token(
+    websocket: WebSocket,
+    # session: Annotated[str | None, Cookie()] = None,
+    token: Annotated[str | None, Query()] = None,
+):
+    if token is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    return token
+
+
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',

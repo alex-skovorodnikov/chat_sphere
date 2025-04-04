@@ -2,38 +2,67 @@ import logging
 from typing import Annotated
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
-from src.depends.dependencies import get_current_user, get_websocket_manager, get_message_service
-from src.services.websocket import WebSocketConnectionManager
-from src.services.messages import CustomMessageService
-from src.schemas.entity import MessageCreate
-
+from src.depends.dependencies import (
+    get_current_user,
+    get_token,
+)
+from src.services.websocket import websocket_manager
+from src.db.postgres import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from json.decoder import JSONDecodeError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.websocket('/{chat_id}')
+@router.websocket('')
 async def websocket_endpoint(
-        websocket: WebSocket,
-        chat_id: str,
-        manager: Annotated[WebSocketConnectionManager, Depends(get_websocket_manager)],
-        message_service: Annotated[CustomMessageService, Depends(get_message_service)],
+    websocket: WebSocket,
+    token: Annotated[str, Depends(get_token)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+
 
 ):
-    token = websocket.query_params.get('token')
     user_id = get_current_user(token)
     logger.info(f'{token=} {user_id=} success')
 
-    await manager.connect(chat_id, user_id, websocket)
+    await websocket_manager.connect(user_id, websocket)
     try:
         while True:
-            data = await websocket.receive_text()
-            message = MessageCreate(
-                chat_id=chat_id,
-                sender_id=user_id,
-                text=data,
-            )
-            await message_service.create_message(message)
-            await manager.send_message(chat_id, f'Message from {user_id} in chat {chat_id}: {data}')
+            try:
+                data = await websocket.receive_json()
+
+                action = data.get('type')
+                if not action:
+                    logger.error('No type in message')
+                    await websocket.send_text('No type in message')
+                    continue
+
+                handler = websocket_manager.handlers.get(action)
+
+                if not handler:
+                    logger.error(f'No handler for type: {action}')
+                    await websocket.send_text('No handler for this action')
+                    continue
+
+                payload = data.get('payload')
+                logger.info(f'Got payload: {payload=}')
+                if not payload:
+                    logger.error('No payload in message')
+                    await websocket.send_text('No payload in message')
+                    continue
+
+                await handler(**data.get('payload'), db=db)
+
+            except (JSONDecodeError, AttributeError) as e:
+                logger.error(f'Error receiving message: {e}')
+                await websocket.send_text('Wrong message format')
+                continue
+            except ValueError as e:
+                logger.error(f'Value error : {e}')
+                await websocket.send_text(f'Value error: {e}')
+                continue
+
+            await websocket_manager.send_message(user_id, f'resp: {data}')
     except WebSocketDisconnect:
-        await manager.disconnect(chat_id, websocket)
+        await websocket_manager.disconnect(user_id, websocket)
