@@ -4,7 +4,11 @@ import websockets
 import aiohttp
 import json
 
-from data import add_user_to_group
+from data import (
+    new_message,
+    # create_group_chat,
+    # create_personal_chat
+)
 
 
 async def authenticate(username: str, password: str):
@@ -42,19 +46,20 @@ async def send_message(username: str, password: str):
     print(f'{token=}')
 
     async with websockets.connect(uri) as websocket:
-        receive_task = asyncio.create_task(receive_message(websocket))
-    #
+        # receive_task = asyncio.create_task(receive_message(websocket))
+        #
         try:
-            while True:
-                await asyncio.sleep(3)
-                await websocket.send(json.dumps(add_user_to_group))
+            # while True:
+            #     await asyncio.sleep(3)
+            await websocket.send(json.dumps(new_message))
+            await asyncio.sleep(5)
 
         except websockets.ConnectionClosed:
             print('Connection closed')
 
-        finally:
-            receive_task.cancel()
-            await receive_task
+        # finally:
+            # receive_task.cancel()
+            # await receive_task
 
 if __name__ == '__main__':
     username = 'user1'

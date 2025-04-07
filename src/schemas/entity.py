@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class ChatCreate(BaseModel):
     title: str
     chat_type: str = 'personal'
+    group_id: UUID
 
 
 class Chat(ChatCreate):
@@ -31,7 +32,7 @@ class User(BaseModel):
 class GroupCreate(BaseModel):
     title: str
     creator_id: UUID
-    # users: list[User] = []
+    users: list[User] = []
 
 
 class Group(BaseModel):

@@ -22,12 +22,20 @@ from src.schemas.token import TokenType
 from src.services.token import JWTManageService
 from src.managers.websocket_manager import WebSocketConnectionManager
 from src.services.messages import CustomMessageService
+from src.services.history_service import CustomHistoryService
 
 
 logger = logging.getLogger(__name__)
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='api/v1/auth/signin')
+
+
+def get_pagination_params(
+    limit: int = Query(10, le=100),
+    offset: int = Query(0),
+):
+    return limit, offset
 
 
 async def get_token(
@@ -61,6 +69,11 @@ def get_user_service(
     db: AsyncSession = Depends(get_session),
 ) -> CustomUserService:
     return CustomUserService(db=db)
+
+
+@lru_cache
+def get_history_service(db: AsyncSession = Depends(get_session)) -> CustomHistoryService:
+    return CustomHistoryService(db=db)
 
 
 @lru_cache

@@ -63,6 +63,9 @@ class Chat(Base):
             raise ValueError('A personal chat must contain exactly two participants')
         return users
 
+    def __repr__(self):
+        return f'<Chat(id={self.id!r}, title={self.title!r})>'
+
 
 class Group(Base):
     __tablename__ = 'groups'
@@ -80,6 +83,9 @@ class Group(Base):
 
     users = relationship('User', secondary=group_users, back_populates='groups')
     chats = relationship('Chat', back_populates='group')
+
+    def __repr__(self):
+        return f'<Group(id={self.id!r}, title={self.title!r})>'
 
 
 class Message(Base):

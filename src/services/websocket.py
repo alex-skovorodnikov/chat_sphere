@@ -1,22 +1,18 @@
 import logging
 from uuid import UUID
 from fastapi import Depends
+from fastapi.encoders import jsonable_encoder
 from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from src.models.entity import User, Group, Chat, Message
 
 from schemas.entity import MessageCreate
 from src.db.postgres import get_session
-from src.depends.dependencies import (
-    get_group_service,
-    get_user_service,
-    get_chat_service,
-    get_message_service,
-)
 from src.schemas.entity import GroupCreate, ChatCreate
 
 from src.managers.websocket_manager import WebSocketConnectionManager
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,27 +26,17 @@ async def new_message(
     text: str,
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
-    message_service = get_message_service(db=db)
+    try:
+        message = MessageCreate(chat_id=chat_id, sender_id=sender_id, text=text)
+        message_dto = jsonable_encoder(message.model_dump())
+        message = Message(**message_dto)
 
-    new_message = await message_service.create_message(
-        MessageCreate(chat_id=chat_id, sender_id=sender_id, text=text),
-    )
-    if not new_message:
-        raise ValueError('Error creating message')
+        db.add(message)
+        await db.commit()
+
+    except Exception as e:
+        raise ValueError(f'Error creating message. {e}')
     logger.info(f'New message created {new_message=}')
-
-
-@websocket_manager.handler('create_group')
-async def create_group(
-    title: str,
-    creator_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_session)],
-):
-    group_service = get_group_service(db=db)
-    new_group = await group_service.create(GroupCreate(title=title, creator_id=creator_id))
-    if not new_group:
-        logger.error(f'Group with title {title} already exists')
-    logger.info(f'New group created {new_group=}')
 
 
 @websocket_manager.handler('add_user_to_group')
@@ -59,15 +45,17 @@ async def add_user_to_group(
     user_id: UUID,
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
-    async with db.begin():
-        group_service = get_group_service(db=db)
-        user_service = get_user_service(db=db)
+    async with (db.begin()):
 
-        group = await group_service.get_by_id(group_id)
+        stmt = select(Group).where(Group.id == user_id)
+        res = await db.execute(stmt)
+        group = res.scalar_one_or_none()
         if not group:
             raise ValueError(f'Group with id {group_id} not found')
 
-        user = await user_service.get_user(str(user_id))
+        stmt = select(User).where(User.id == user_id)
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
         if not user:
             raise ValueError(f'User with id {user_id} not found')
 
@@ -75,20 +63,86 @@ async def add_user_to_group(
             raise ValueError(f'User {user_id} already in group {group_id}')
 
         group.users.append(user)
-        await db.flush()
         await db.commit()
-        logger.info(f'User added to group {group_id=} {user_id=}')
+        logger.info(f'{user_id=} added to group {group_id=} ')
 
 
-@websocket_manager.handler('create_chat')
-async def create_chat(
-    title: UUID,
-    chat_type: Annotated[str, 'personal'],
+@websocket_manager.handler('create_group_chat')
+async def create_group_chat(
+    chat_title: str,
+    group_title: str,
+    creator_id: UUID,
     db: Annotated[AsyncSession, Depends(get_session)],
 ):
-    async with db.begin():
-        chat_service = get_chat_service(db=db)
-        new_chat = await chat_service.create_chat(ChatCreate(title=str(title), chat_type=chat_type))
-        if not new_chat:
-            raise ValueError(f'Chat with title {title} already exists')
-        logger.info(f'New chat created {new_chat=}')
+    logger.info(f'Creating group chat {chat_title} {group_title}')
+    try:
+        async with db.begin():
+            stmt = select(User).where(User.id == creator_id)
+            res = await db.execute(stmt)
+            user = res.scalar_one_or_none()
+
+            group_dto = jsonable_encoder(GroupCreate(title=group_title, creator_id=creator_id).model_dump())
+            new_group = Group(**group_dto)
+            db.add(new_group)
+            new_group.users.append(user)
+            await db.flush()
+
+            chat_dto = jsonable_encoder(
+                ChatCreate(
+                    title=chat_title,
+                    chat_type='group',
+                    group_id=new_group.id,
+                ).model_dump(),
+            )
+            new_chat = Chat(**chat_dto)
+            db.add(new_chat)
+            await db.commit()
+
+    except Exception as e:
+        logger.error(f'An error occurred while creating chat with title {chat_title}. {e}')
+        raise ValueError(f'An error occurred while creating chat with title {chat_title}. {e}')
+
+
+@websocket_manager.handler('create_personal_chat')
+async def create_personal_chat(
+    creator_id: UUID,
+    other_user_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+):
+    logger.info(f'Creating personal chat {creator_id} {other_user_id}')
+    try:
+        async with db.begin():
+            stmt = select(User).where(User.id == creator_id)
+            res = await db.execute(stmt)
+            user = res.scalar_one_or_none()
+
+            stmt = select(User).where(User.id == other_user_id)
+            res = await db.execute(stmt)
+            other_user = res.scalar_one_or_none()
+
+            if not other_user:
+                raise ValueError('Not found other user {other_user_id=}')
+
+            new_group = Group(
+                title=f'{user.name}_{other_user.name}',
+                creator_id=creator_id,
+                users=[user, other_user],
+            )
+            db.add(new_group)
+            await db.flush()
+
+            chat_dto = jsonable_encoder(
+                ChatCreate(
+                    title=f'Chat between {user.name} and {other_user.name}',
+                    chat_type='personal',
+                    group_id=new_group.id,
+                ).model_dump(),
+            )
+            new_chat = Chat(**chat_dto)
+            db.add(new_chat)
+            await db.commit()
+    except Exception as e:
+        logger.error(f'An error occurred while creating personal chat with user_id '
+                     f'{creator_id} and other_user_id {other_user_id} {e}')
+        raise ValueError(f'An error occurred while creating personal chat with user_id '
+                         f'{creator_id} and other_user_id {other_user_id} {e}')

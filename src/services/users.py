@@ -1,6 +1,7 @@
 import logging
 import bcrypt
 
+from uuid import UUID
 from sqlalchemy.future import select
 from src.models.entity import User
 from src.schemas.entity import UserCreate
@@ -37,7 +38,7 @@ class CustomUserService():
 
     async def get_user(
         self,
-        user_id: str = None,
+        user_id: UUID = None,
         user_name: str = None,
     ) -> User:
         if not user_id and not user_name:
