@@ -30,7 +30,7 @@ Follow these steps to set up the project locally:
 
 1.**Install Poetry** (if you haven't already):
 ```bash
-    curl -sSL https://install.python-poetry.org | python3 -
+  curl -sSL https://install.python-poetry.org | python3 -
 ```
 2.**Clone the repository:**
 ```bash
@@ -54,7 +54,7 @@ Follow these steps to set up the project locally:
 ```
 7.**Then, run the migration command:**
 ```bash
-docker-compose exec app poetry run alembic upgrade head
+  docker-compose exec app poetry run alembic upgrade head
 ```
 ---
 ## Contact
