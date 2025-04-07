@@ -19,6 +19,18 @@ logger = logging.getLogger(__name__)
 websocket_manager = WebSocketConnectionManager()
 
 
+@websocket_manager.handler('user_connected')
+async def user_connected(
+    user_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+):
+    stmp = select(Group.id, Group.title).where(Group.users.any(id=user_id))
+    res = await db.execute(stmp)
+    groups = res.scalars().all()
+    message = ','.join([item.title for item in groups])
+    await websocket_manager.send_message(user_id=user_id, message=message)
+
+
 @websocket_manager.handler('new_message')
 async def new_message(
     chat_id: UUID,

@@ -3,8 +3,8 @@ import logging
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer
 from typing import Annotated
-from src.services.users import CustomUserService
-from src.services.token import JWTManageService
+from src.services.users_service import CustomUserService
+from src.services.token_service import JWTManageService
 from src.depends.dependencies import (
     get_user_service,
     validate_user,

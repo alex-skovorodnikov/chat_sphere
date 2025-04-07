@@ -36,6 +36,17 @@ app.include_router(auth_router, prefix='/api/v1/auth', tags=['auth'])
 app.include_router(history_router, prefix='/api/v1', tags=['history'])
 
 
+@app.get('/health')
+async def health():
+    """
+    Health check endpoint.
+
+    Returns:
+        dict: A dictionary indicating the health status of the service.
+    """
+    return {'status': 'healthy'}
+
+
 if __name__ == '__main__':
     import uvicorn
 

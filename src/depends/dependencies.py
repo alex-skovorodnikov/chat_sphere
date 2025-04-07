@@ -10,18 +10,15 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
 from redis.asyncio import Redis
 
-from services.chats import CustomChatService
 from src.core.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.services.users import CustomUserService
-from src.services.groups import CustomGroupService
+from src.services.users_service import CustomUserService
 from src.db.postgres import get_session
 from src.db.token_storage import RedisStorage
 from src.schemas.entity import User
 from src.schemas.token import TokenType
-from src.services.token import JWTManageService
+from src.services.token_service import JWTManageService
 from src.managers.websocket_manager import WebSocketConnectionManager
-from src.services.messages import CustomMessageService
 from src.services.history_service import CustomHistoryService
 
 
@@ -74,20 +71,6 @@ def get_user_service(
 @lru_cache
 def get_history_service(db: AsyncSession = Depends(get_session)) -> CustomHistoryService:
     return CustomHistoryService(db=db)
-
-
-@lru_cache
-def get_chat_service(
-    db: AsyncSession = Depends(get_session),
-) -> CustomChatService:
-    return CustomChatService(db=db)
-
-
-@lru_cache
-def get_group_service(
-    db: AsyncSession = Depends(get_session),
-) -> CustomGroupService:
-    return CustomGroupService(db=db)
 
 
 async def validate_user(
@@ -169,13 +152,6 @@ async def get_current_token_payload(
 @lru_cache
 def get_websocket_manager() -> WebSocketConnectionManager:
     return WebSocketConnectionManager()
-
-
-@lru_cache
-def get_message_service(
-    db: Annotated[AsyncSession, Depends(get_session)],
-) -> CustomMessageService:
-    return CustomMessageService(db=db)
 
 
 class UserGetterFromToken:

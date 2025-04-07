@@ -20,11 +20,8 @@ async def websocket_endpoint(
     websocket: WebSocket,
     token: Annotated[str, Depends(get_token)],
     db: Annotated[AsyncSession, Depends(get_session)],
-
-
 ):
     user_id = get_current_user(token)
-    logger.info(f'{token=} {user_id=} success')
 
     await websocket_manager.connect(user_id, websocket)
     try:
@@ -51,8 +48,9 @@ async def websocket_endpoint(
                     logger.error('No payload in message')
                     await websocket.send_text('No payload in message')
                     continue
-
-                await handler(**data.get('payload'), db=db)
+                payload['user_id'] = user_id
+                logger.info(f'New payload: {payload=}')
+                await handler(**payload, db=db)
 
             except (JSONDecodeError, AttributeError) as e:
                 logger.error(f'Error receiving message: {e}')
@@ -63,6 +61,6 @@ async def websocket_endpoint(
                 await websocket.send_text(f'Value error: {e}')
                 continue
 
-            await websocket_manager.send_message(user_id, f'resp: {data}')
+            await websocket_manager.send_message(user_id, f'resp: {data}', websocket)
     except WebSocketDisconnect:
         await websocket_manager.disconnect(user_id, websocket)

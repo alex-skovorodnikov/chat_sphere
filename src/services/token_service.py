@@ -349,48 +349,6 @@ class JWTManageService(TokenManageService):
             logger.error(f"Failed to decode JWT: {e}")
             raise
 
-    async def revoke_token(self, token: str) -> None:
-        """
-        Revoke the given token.
-
-        Args:
-            token (str): The token to revoke.
-        """
-        try:
-            await self.storage.blacklist_token(
-                token, self._access_token_expire_minutes * 60,
-            )
-        except Exception as e:
-            logger.error(f"Failed to revoke token: {e}")
-            raise
-
-    async def revoke_all_tokens_for_user(self, user_id: str) -> None:
-        """
-        Revoke all tokens for the given user.
-
-        Args:
-            user_id (str): The ID of the user.
-        """
-        try:
-            access_tokens = await self.storage.get_user_tokens(
-                user_id, TokenType.ACCESS,
-            )
-            refresh_tokens = await self.storage.get_user_tokens(
-                user_id, TokenType.REFRESH,
-            )
-
-            for token in access_tokens:
-                await self.revoke_token(token.decode('utf-8'))
-
-            for token in refresh_tokens:
-                await self.revoke_token(token.decode('utf-8'))
-
-            await self.storage.delete(f"user:{user_id}:access_tokens")
-            await self.storage.delete(f"user:{user_id}:refresh_tokens")
-        except Exception as e:
-            logger.error(f"Failed to revoke all tokens for user {user_id}: {e}")
-            raise
-
     async def validate_token(self, token: str, token_type: TokenType) -> dict:
         """
         Validate the given token and return its payload.
